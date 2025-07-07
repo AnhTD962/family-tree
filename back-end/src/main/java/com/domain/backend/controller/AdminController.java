@@ -1,0 +1,41 @@
+package com.domain.backend.controller;
+
+import com.domain.backend.dto.FamilyTreeHistoryDTO;
+import com.domain.backend.dto.UserDTO;
+import com.domain.backend.service.AdminService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/admin")
+@CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminController {
+
+    @Autowired
+    private AdminService adminService;
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
+    @PutMapping("/users/{id}/toggle-status")
+    public ResponseEntity<Void> toggleUserStatus(@PathVariable String id) {
+        adminService.toggleUserStatus(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<Page<FamilyTreeHistoryDTO>> getFamilyTreeHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminService.getFamilyTreeHistory(PageRequest.of(page, size)));
+    }
+}

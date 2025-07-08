@@ -6,7 +6,6 @@ import com.domain.backend.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,20 +21,20 @@ public class AdminController {
     private AdminService adminService;
 
     @GetMapping("/users")
-    public ResponseEntity<List<UserDTO>> getAllUsers() {
-        return ResponseEntity.ok(adminService.getAllUsers());
+    public List<UserDTO> getAllUsers() {
+        return adminService.getAllUsers();
     }
 
     @PutMapping("/users/{id}/toggle-status")
-    public ResponseEntity<Void> toggleUserStatus(@PathVariable String id) {
+    public String toggleUserStatus(@PathVariable String id) {
         adminService.toggleUserStatus(id);
-        return ResponseEntity.noContent().build();
+        return "User status toggled successfully";
     }
 
     @GetMapping("/history")
-    public ResponseEntity<Page<FamilyTreeHistoryDTO>> getFamilyTreeHistory(
+    public Page<FamilyTreeHistoryDTO> getFamilyTreeHistory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(adminService.getFamilyTreeHistory(PageRequest.of(page, size)));
+        return adminService.getFamilyTreeHistory(PageRequest.of(page, size));
     }
 }

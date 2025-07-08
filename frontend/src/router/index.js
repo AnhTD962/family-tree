@@ -1,81 +1,53 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useUserStore } from '@/store/user.js'
+import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   {
-    path: '/',
-    name: 'home',
-    component: () => import('@/views/HomeView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/login',
-    name: 'login',
-    component: () => import('@/views/LoginView.vue'),
-    meta: { guestOnly: true }
+    name: 'Login',
+    component: () => import('@/views/AuthView.vue'),
+    meta: { requiresGuest: true },
   },
   {
     path: '/register',
-    name: 'register',
-    component: () => import('@/views/RegisterView.vue'),
-    meta: { guestOnly: true }
+    name: 'Register',
+    component: () => import('@/views/AuthView.vue'),
+    meta: { requiresGuest: true },
   },
   {
-    path: '/family',
-    name: 'family',
+    path: '/',
+    name: 'FamilyTree',
     component: () => import('@/views/FamilyTreeView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/profile',
-    name: 'profile',
-    component: () => import('@/views/ProfileView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/members',
-    name: 'members',
-    component: () => import('@/views/MemberListView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/members/:id',
-    name: 'member-detail',
+    path: '/member/:id',
+    name: 'MemberDetail',
     component: () => import('@/views/MemberDetailView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/:pathMatch(.*)*',
-    name: 'not-found',
-    component: () => import('@/views/NotFoundView.vue')
-  }
+    path: '/admin',
+    name: 'AdminDashboard',
+    component: () => import('@/views/AdminDashboard.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
-    return savedPosition || { top: 0 }
-  }
 })
 
-// Navigation guard
 router.beforeEach((to, from, next) => {
-  const userStore = useUserStore()
-  const isAuthenticated = userStore.isLoggedIn
-  
-  // Redirect to login if route requires authentication and user is not authenticated
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
-  } 
-  // Redirect to home if user is authenticated and tries to access guest-only routes
-  else if (to.meta.guestOnly && isAuthenticated) {
-    next({ name: 'home' })
-  } 
-  // Proceed with navigation
-  else {
-    next()
-  }
+  const authStore = useAuthStore()
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/login')
+  } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    next('/')
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    next('/')
   } else {
     next()
   }

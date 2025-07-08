@@ -1,103 +1,78 @@
 import axios from 'axios'
-import { useAuthStore } from '@/store/auth'
-import router from '@/router'
+import { API_BASE_URL } from '@/utils/constants'
+import { getToken, getRefreshToken, setTokens, removeTokens } from '@/utils/auth'
+import { useToast } from 'vue-toastification'
 
-// Create axios instance with base URL and headers
+// Toast instance (safe fallback for non-UI environments)
+let toast
+try {
+  toast = useToast()
+} catch (err) {
+  toast = { error: console.error }
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
   },
-  timeout: 10000 // 10 seconds
 })
 
-// Request interceptor
+// Request Interceptor: Attach access token
 api.interceptors.request.use(
   (config) => {
-    const authStore = useAuthStore()
-    const token = authStore.token || localStorage.getItem('token')
-    
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
-// Response interceptor
+// Response Interceptor: Handle errors + refresh logic
 api.interceptors.response.use(
-  (response) => {
-    // Return JSON data if available, otherwise return the full response
-    return response.data || response
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config
-    
-    // Handle 401 Unauthorized errors
-    if (error.response?.status === 401 && !originalRequest._retry) {
+
+    // Handle expired token (401) and refresh
+    if (error.response?.status === 401 && !originalRequest._retry && getRefreshToken()) {
       originalRequest._retry = true
-      
-      // If we have a refresh token, try to refresh the access token
-      const refreshToken = localStorage.getItem('refreshToken')
-      
-      if (refreshToken) {
-        try {
-          // Call your refresh token endpoint
-          const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/auth/refresh-token`, {
-            refreshToken
-          })
-          
-          const { accessToken } = response.data
-          
-          // Update the token in the store and localStorage
-          const authStore = useAuthStore()
-          authStore.token = accessToken
-          localStorage.setItem('token', accessToken)
-          
-          // Update the Authorization header
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`
-          
-          // Retry the original request
-          return api(originalRequest)
-        } catch (refreshError) {
-          // If refresh token fails, log the user out
-          console.error('Refresh token failed:', refreshError)
-          const authStore = useAuthStore()
-          authStore.logout()
-          router.push('/login')
-          return Promise.reject(refreshError)
-        }
-      } else {
-        // No refresh token available, log the user out
-        const authStore = useAuthStore()
-        authStore.logout()
-        router.push('/login')
+      try {
+        const refreshResponse = await axios.post(`${API_BASE_URL}/api/auth/refresh`, null, {
+          headers: {
+            Authorization: `Bearer ${getRefreshToken()}`,
+          },
+        })
+
+        const newToken = refreshResponse.data.token
+        const newRefreshToken = refreshResponse.data.refreshToken
+
+        setTokens(newToken, newRefreshToken)
+
+        originalRequest.headers.Authorization = `Bearer ${newToken}`
+        return api(originalRequest)
+      } catch (refreshError) {
+        removeTokens()
+        toast.error('Session expired. Please login again.')
+        window.location.href = '/login'
+        return Promise.reject(refreshError)
       }
     }
-    
-    // Handle other errors
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        'An error occurred. Please try again.'
-    
-    // You can add additional error handling here (e.g., show toast notification)
-    console.error('API Error:', {
-      message: errorMessage,
-      status: error.response?.status,
-      url: error.config?.url,
-      method: error.config?.method
-    })
-    
-    return Promise.reject({
-      message: errorMessage,
-      status: error.response?.status,
-      data: error.response?.data
-    })
+
+    // General error handling
+    if (error.response?.status === 401) {
+      removeTokens()
+      toast.error('Unauthorized. Please login again.')
+      window.location.href = '/login'
+    } else if (error.response?.status >= 500) {
+      toast.error('Server error. Please try again later.')
+    } else if (error.response?.data?.message) {
+      toast.error(error.response.data.message)
+    }
+
+    return Promise.reject(error)
   }
 )
 

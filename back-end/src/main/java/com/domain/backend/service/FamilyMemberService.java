@@ -75,6 +75,7 @@ public class FamilyMemberService {
         member.setUpdatedAt(LocalDateTime.now());
         member.setCreatedBy(getCurrentUserId());
 
+        autoFillSpouseAndParents(member);
         // Tính toán generation level
         calculateGeneration(member);
 
@@ -107,6 +108,8 @@ public class FamilyMemberService {
         existingMember.setUpdatedAt(LocalDateTime.now());
         existingMember.setUpdatedBy(getCurrentUserId());
 
+        autoFillSpouseAndParents(existingMember);
+
         FamilyMember updated = familyMemberRepository.save(existingMember);
 
         // Log history
@@ -114,6 +117,47 @@ public class FamilyMemberService {
 
         return convertToDTO(updated);
     }
+
+    private void autoFillSpouseAndParents(FamilyMember member) {
+        String memberId = member.getId();
+
+        // ===== 1. Cập nhật spouse hai chiều nếu hợp lệ =====
+        if (member.getSpouseId() != null) {
+            familyMemberRepository.findById(member.getSpouseId()).ifPresent(spouse -> {
+                if (spouse.getSpouseId() == null) {
+                    spouse.setSpouseId(memberId);
+                    familyMemberRepository.save(spouse);
+                } else if (!spouse.getSpouseId().equals(memberId)) {
+                    // Đã có spouse khác => log cảnh báo
+                    logHistory("WARNING", memberId, member.getFullName(),
+                            "Spouse " + spouse.getFullName() + " already has another spouse: " + spouse.getSpouseId());
+                }
+            });
+        }
+
+        // ===== 2. Nếu có father nhưng chưa có mother => gán theo father.spouseId =====
+        if (member.getFatherId() != null && member.getMotherId() == null) {
+            familyMemberRepository.findById(member.getFatherId()).ifPresent(father -> {
+                if (father.getSpouseId() != null) {
+                    member.setMotherId(father.getSpouseId());
+                }
+            });
+        }
+
+        // ===== 3. Nếu có mother nhưng chưa có father => gán theo mother.spouseId =====
+        if (member.getMotherId() != null && member.getFatherId() == null) {
+            familyMemberRepository.findById(member.getMotherId()).ifPresent(mother -> {
+                if (mother.getSpouseId() != null) {
+                    member.setFatherId(mother.getSpouseId());
+                }
+            });
+        }
+
+        // ===== 4. Cập nhật lại danh sách con cho cha mẹ =====
+        updateParentChildren(member);
+    }
+
+
 
     @Transactional
     public void deleteFamilyMember(String id) {

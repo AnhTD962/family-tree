@@ -20,36 +20,36 @@ public class FamilyMemberController {
     private FamilyMemberService familyMemberService;
 
     @GetMapping("/tree")
-    public ResponseEntity<FamilyTreeResponse> getFamilyTree() {
-        return ResponseEntity.ok(familyMemberService.getFamilyTree());
+    public FamilyTreeResponse getFamilyTree() {
+        return familyMemberService.getFamilyTree();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FamilyMemberDTO> getFamilyMember(@PathVariable String id) {
-        return ResponseEntity.ok(familyMemberService.getFamilyMember(id));
+    public FamilyMemberDTO getFamilyMember(@PathVariable String id) {
+        return familyMemberService.getFamilyMember(id);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<FamilyMemberDTO>> searchMembers(@RequestParam String query) {
-        return ResponseEntity.ok(familyMemberService.searchMembers(query));
+    public List<FamilyMemberDTO> searchMembers(@RequestParam String query) {
+        return familyMemberService.searchMembers(query);
     }
 
     @PostMapping
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public ResponseEntity<FamilyMemberDTO> createFamilyMember(@Valid @RequestBody FamilyMemberDTO memberDTO) {
-        return ResponseEntity.ok(familyMemberService.createFamilyMember(memberDTO));
+    public FamilyMemberDTO createFamilyMember(@Valid @RequestBody FamilyMemberDTO memberDTO) {
+        return familyMemberService.createFamilyMember(memberDTO);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public ResponseEntity<FamilyMemberDTO> updateFamilyMember(@PathVariable String id, @Valid @RequestBody FamilyMemberDTO memberDTO) {
-        return ResponseEntity.ok(familyMemberService.updateFamilyMember(id, memberDTO));
+    public FamilyMemberDTO updateFamilyMember(@PathVariable String id, @Valid @RequestBody FamilyMemberDTO memberDTO) {
+        return familyMemberService.updateFamilyMember(id, memberDTO);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteFamilyMember(@PathVariable String id) {
+    public String deleteFamilyMember(@PathVariable String id) {
         familyMemberService.deleteFamilyMember(id);
-        return ResponseEntity.noContent().build();
+        return "Member deleted successfully";
     }
 }

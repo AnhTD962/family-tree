@@ -26,4 +26,13 @@ public interface FamilyMemberRepository extends MongoRepository<FamilyMember, St
 
     @Query("{'$or': [{'fatherId': null}, {'motherId': null}]}")
     List<FamilyMember> findRootMembers();
+
+    @Query("{$and: [" +
+            "{$or: [" +
+            "{ 'fatherId': ?0 }, " +
+            "{ 'motherId': ?1 }" +
+            "]}, " +
+            "{ '_id': { $ne: ?2 } }" +
+            "]}")
+    List<FamilyMember> findSiblings(String fatherId, String motherId, String selfId);
 }

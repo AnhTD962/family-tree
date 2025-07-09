@@ -9,8 +9,10 @@
         </main>
       </div>
     </div>
-    <div v-else class="min-h-screen flex items-center justify-center">
-      <router-view />
+    <div v-else class="min-h-screen flex flex-col">
+      <main class="flex-1 p-6">
+        <router-view />
+      </main>
     </div>
   </div>
 </template>
@@ -29,7 +31,6 @@ export default {
   },
   setup() {
     const authStore = useAuthStore()
-
     const isAuthenticated = computed(() => authStore.isAuthenticated)
 
     onMounted(() => {

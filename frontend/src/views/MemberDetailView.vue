@@ -97,6 +97,11 @@
                       </p>
                       <p v-if="member.children && member.children.length > 0">
                         <span class="font-medium">Children:</span> {{ member.children.length }}
+                        <router-link v-if="member.children.length === 1" :to="`/member/${member.children[0].id}`"
+                          class="text-blue-600 hover:underline">
+                          {{ member.children[0].fullName }}
+                        </router-link>
+                        <span v-else-if="member.children.length > 1"> (see below)</span>
                       </p>
                     </div>
                   </div>
@@ -113,12 +118,39 @@
             </div>
           </div>
 
-          <!-- Children Section -->
+          <!-- Family Section -->
           <div v-if="member.children && member.children.length > 0" class="mt-8">
             <h3 class="text-xl font-semibold text-gray-900 mb-4">Children</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FamilyMemberCard v-for="child in member.children" :key="child.id" :member="child" :show-actions="false"
                 @click="navigateToMember(child.id)" />
+            </div>
+          </div>
+
+          <!-- Spouse Section -->
+          <div v-if="member.spouse" class="mt-8">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Spouse</h3>
+            <FamilyMemberCard :member="member.spouse" :show-actions="false"
+              @click="navigateToMember(member.spouse.id)" />
+          </div>
+
+          <!-- Parents Section -->
+          <div v-if="member.father || member.mother" class="mt-8">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Parents</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FamilyMemberCard v-if="member.father" :member="member.father" :show-actions="false"
+                @click="navigateToMember(member.father.id)" />
+              <FamilyMemberCard v-if="member.mother" :member="member.mother" :show-actions="false"
+                @click="navigateToMember(member.mother.id)" />
+            </div>
+          </div>
+
+          <!-- Siblings Section -->
+          <div v-if="member.siblings && member.siblings.length > 0" class="mt-8">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">Siblings</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <FamilyMemberCard v-for="sibling in member.siblings" :key="sibling.id" :member="sibling"
+                :show-actions="false" @click="navigateToMember(sibling.id)" />
             </div>
           </div>
 

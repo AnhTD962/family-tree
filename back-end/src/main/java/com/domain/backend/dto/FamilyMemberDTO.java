@@ -37,12 +37,14 @@ public class FamilyMemberDTO {
     private String fatherId;
     private String motherId;
     private List<String> childrenIds;
+    private List<String> siblingsIds;
 
     // Related objects for detail view
     private FamilyMemberDTO spouse;
     private FamilyMemberDTO father;
     private FamilyMemberDTO mother;
     private List<FamilyMemberDTO> children;
+    private List<FamilyMemberDTO> siblings;
 
     private int generation;
     private LocalDateTime createdAt;

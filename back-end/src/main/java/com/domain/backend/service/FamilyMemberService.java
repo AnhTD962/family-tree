@@ -39,24 +39,33 @@ public class FamilyMemberService {
 
         FamilyMemberDTO dto = convertToDTO(member);
 
-        // Lấy thông tin người thân
+        // Spouse
         if (member.getSpouseId() != null) {
             familyMemberRepository.findById(member.getSpouseId())
                     .ifPresent(spouse -> dto.setSpouse(convertToDTO(spouse)));
         }
 
+        // Father
         if (member.getFatherId() != null) {
             familyMemberRepository.findById(member.getFatherId())
                     .ifPresent(father -> dto.setFather(convertToDTO(father)));
         }
 
+        // Mother
         if (member.getMotherId() != null) {
             familyMemberRepository.findById(member.getMotherId())
                     .ifPresent(mother -> dto.setMother(convertToDTO(mother)));
         }
 
+        // Children
         List<FamilyMember> children = familyMemberRepository.findChildren(id);
         dto.setChildren(children.stream().map(this::convertToDTO).collect(Collectors.toList()));
+
+        // Siblings
+        List<FamilyMember> siblings = familyMemberRepository.findSiblings(
+                member.getFatherId(), member.getMotherId(), member.getId()
+        );
+        dto.setSiblings(siblings.stream().map(this::convertToDTO).collect(Collectors.toList()));
 
         return dto;
     }
@@ -75,16 +84,18 @@ public class FamilyMemberService {
         member.setUpdatedAt(LocalDateTime.now());
         member.setCreatedBy(getCurrentUserId());
 
+        // Auto fill spouse and parents
         autoFillSpouseAndParents(member);
-        // Tính toán generation level
+
+        // Calculate generation AFTER filling
         calculateGeneration(member);
 
         FamilyMember saved = familyMemberRepository.save(member);
 
-        // Cập nhật parent's children list
+        // Update parent-child relationships
         updateParentChildren(saved);
 
-        // Log history
+        // Log
         logHistory("CREATE", saved.getId(), saved.getFullName(), "Created new family member");
 
         return convertToDTO(saved);
@@ -107,70 +118,28 @@ public class FamilyMemberService {
         existingMember.setAvatarUrl(memberDTO.getAvatarUrl());
         existingMember.setUpdatedAt(LocalDateTime.now());
         existingMember.setUpdatedBy(getCurrentUserId());
+        existingMember.setFatherId(memberDTO.getFatherId());
+        existingMember.setMotherId(memberDTO.getMotherId());
+        existingMember.setSpouseId(memberDTO.getSpouseId());
 
         autoFillSpouseAndParents(existingMember);
+        calculateGeneration(existingMember);
 
         FamilyMember updated = familyMemberRepository.save(existingMember);
 
-        // Log history
         logHistory("UPDATE", updated.getId(), updated.getFullName(), "Updated family member information");
 
         return convertToDTO(updated);
     }
-
-    private void autoFillSpouseAndParents(FamilyMember member) {
-        String memberId = member.getId();
-
-        // ===== 1. Cập nhật spouse hai chiều nếu hợp lệ =====
-        if (member.getSpouseId() != null) {
-            familyMemberRepository.findById(member.getSpouseId()).ifPresent(spouse -> {
-                if (spouse.getSpouseId() == null) {
-                    spouse.setSpouseId(memberId);
-                    familyMemberRepository.save(spouse);
-                } else if (!spouse.getSpouseId().equals(memberId)) {
-                    // Đã có spouse khác => log cảnh báo
-                    logHistory("WARNING", memberId, member.getFullName(),
-                            "Spouse " + spouse.getFullName() + " already has another spouse: " + spouse.getSpouseId());
-                }
-            });
-        }
-
-        // ===== 2. Nếu có father nhưng chưa có mother => gán theo father.spouseId =====
-        if (member.getFatherId() != null && member.getMotherId() == null) {
-            familyMemberRepository.findById(member.getFatherId()).ifPresent(father -> {
-                if (father.getSpouseId() != null) {
-                    member.setMotherId(father.getSpouseId());
-                }
-            });
-        }
-
-        // ===== 3. Nếu có mother nhưng chưa có father => gán theo mother.spouseId =====
-        if (member.getMotherId() != null && member.getFatherId() == null) {
-            familyMemberRepository.findById(member.getMotherId()).ifPresent(mother -> {
-                if (mother.getSpouseId() != null) {
-                    member.setFatherId(mother.getSpouseId());
-                }
-            });
-        }
-
-        // ===== 4. Cập nhật lại danh sách con cho cha mẹ =====
-        updateParentChildren(member);
-    }
-
-
 
     @Transactional
     public void deleteFamilyMember(String id) {
         FamilyMember member = familyMemberRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
-        // Xóa tất cả con cháu
         deleteDescendants(id);
-
-        // Xóa member chính
         familyMemberRepository.deleteById(id);
 
-        // Log history
         logHistory("DELETE", id, member.getFullName(), "Deleted family member and all descendants");
     }
 
@@ -196,6 +165,54 @@ public class FamilyMemberService {
             }
         }
         member.setGeneration(generation);
+    }
+
+    private void autoFillSpouseAndParents(FamilyMember member) {
+        String memberId = member.getId();
+
+        // 1. Spouse sync and generation sync
+        if (member.getSpouseId() != null) {
+            familyMemberRepository.findById(member.getSpouseId()).ifPresent(spouse -> {
+
+                // Generation sync
+                if (member.getGeneration() == 0 && spouse.getGeneration() > 0) {
+                    member.setGeneration(spouse.getGeneration());
+                } else if (spouse.getGeneration() == 0 && member.getGeneration() > 0) {
+                    spouse.setGeneration(member.getGeneration());
+                    familyMemberRepository.save(spouse);
+                }
+
+                // Spouse link
+                if (spouse.getSpouseId() == null) {
+                    spouse.setSpouseId(memberId);
+                    familyMemberRepository.save(spouse);
+                } else if (!spouse.getSpouseId().equals(memberId)) {
+                    logHistory("WARNING", memberId, member.getFullName(),
+                            "Spouse " + spouse.getFullName() + " already has another spouse: " + spouse.getSpouseId());
+                }
+            });
+        }
+
+        // 2. Fill mother from father's spouse
+        if (member.getFatherId() != null && member.getMotherId() == null) {
+            familyMemberRepository.findById(member.getFatherId()).ifPresent(father -> {
+                if (father.getSpouseId() != null) {
+                    member.setMotherId(father.getSpouseId());
+                }
+            });
+        }
+
+        // 3. Fill father from mother's spouse
+        if (member.getMotherId() != null && member.getFatherId() == null) {
+            familyMemberRepository.findById(member.getMotherId()).ifPresent(mother -> {
+                if (mother.getSpouseId() != null) {
+                    member.setFatherId(mother.getSpouseId());
+                }
+            });
+        }
+
+        // 4. Update children lists of parents
+        updateParentChildren(member);
     }
 
     private void updateParentChildren(FamilyMember member) {

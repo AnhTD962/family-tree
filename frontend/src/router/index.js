@@ -18,7 +18,6 @@ const routes = [
     path: '/',
     name: 'FamilyTree',
     component: () => import('@/views/FamilyTreeView.vue'),
-    meta: { requiresAuth: true },
   },
   {
     path: '/member/:id',
@@ -43,7 +42,7 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
+    next('/')
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
     next('/')
   } else if (to.meta.requiresAdmin && !authStore.isAdmin) {

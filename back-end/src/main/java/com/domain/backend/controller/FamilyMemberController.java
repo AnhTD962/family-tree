@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -34,22 +35,31 @@ public class FamilyMemberController {
         return familyMemberService.searchMembers(query);
     }
 
-    @PostMapping
+    @PostMapping(consumes = {"multipart/form-data"})
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public FamilyMemberDTO createFamilyMember(@Valid @RequestBody FamilyMemberDTO memberDTO) {
-        return familyMemberService.createFamilyMember(memberDTO);
+    public ResponseEntity<FamilyMemberDTO> createFamilyMember(
+            @RequestPart("member") @Valid FamilyMemberDTO memberDTO,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        FamilyMemberDTO created = familyMemberService.createFamilyMember(memberDTO, file);
+        return ResponseEntity.ok(created);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public FamilyMemberDTO updateFamilyMember(@PathVariable String id, @Valid @RequestBody FamilyMemberDTO memberDTO) {
-        return familyMemberService.updateFamilyMember(id, memberDTO);
+    public ResponseEntity<FamilyMemberDTO> updateFamilyMember(
+            @PathVariable String id,
+            @RequestPart("member") @Valid FamilyMemberDTO memberDTO,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        FamilyMemberDTO updated = familyMemberService.updateFamilyMember(id, memberDTO, file);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public String deleteFamilyMember(@PathVariable String id) {
+    public ResponseEntity<String> deleteFamilyMember(@PathVariable String id) {
         familyMemberService.deleteFamilyMember(id);
-        return "Member deleted successfully";
+        return ResponseEntity.ok("Member deleted successfully");
     }
 }

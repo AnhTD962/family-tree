@@ -7,12 +7,21 @@ import com.domain.backend.model.FamilyTreeHistory;
 import com.domain.backend.repository.FamilyMemberRepository;
 import com.domain.backend.repository.FamilyTreeHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +32,9 @@ public class FamilyMemberService {
 
     @Autowired
     private FamilyTreeHistoryRepository historyRepository;
+
+    @Value("${upload.dir}")
+    private String uploadDir;
 
     public FamilyTreeResponse getFamilyTree() {
         List<FamilyMember> allMembers = familyMemberRepository.findAll();
@@ -40,19 +52,19 @@ public class FamilyMemberService {
         FamilyMemberDTO dto = convertToDTO(member);
 
         // Spouse
-        if (member.getSpouseId() != null) {
+        if (member.getSpouseId() != null && !member.getSpouseId().isBlank()) {
             familyMemberRepository.findById(member.getSpouseId())
                     .ifPresent(spouse -> dto.setSpouse(convertToDTO(spouse)));
         }
 
         // Father
-        if (member.getFatherId() != null) {
+        if (member.getFatherId() != null && !member.getFatherId().isBlank()) {
             familyMemberRepository.findById(member.getFatherId())
                     .ifPresent(father -> dto.setFather(convertToDTO(father)));
         }
 
         // Mother
-        if (member.getMotherId() != null) {
+        if (member.getMotherId() != null && !member.getMotherId().isBlank()) {
             familyMemberRepository.findById(member.getMotherId())
                     .ifPresent(mother -> dto.setMother(convertToDTO(mother)));
         }
@@ -61,11 +73,16 @@ public class FamilyMemberService {
         List<FamilyMember> children = familyMemberRepository.findChildren(id);
         dto.setChildren(children.stream().map(this::convertToDTO).collect(Collectors.toList()));
 
-        // Siblings
-        List<FamilyMember> siblings = familyMemberRepository.findSiblings(
-                member.getFatherId(), member.getMotherId(), member.getId()
-        );
-        dto.setSiblings(siblings.stream().map(this::convertToDTO).collect(Collectors.toList()));
+        // Siblings (chỉ khi có cha hoặc mẹ hợp lệ)
+        if ((member.getFatherId() != null && !member.getFatherId().isBlank())
+                || (member.getMotherId() != null && !member.getMotherId().isBlank())) {
+            List<FamilyMember> siblings = familyMemberRepository.findSiblings(
+                    member.getFatherId(), member.getMotherId(), member.getId()
+            );
+            dto.setSiblings(siblings.stream().map(this::convertToDTO).collect(Collectors.toList()));
+        } else {
+            dto.setSiblings(Collections.emptyList());
+        }
 
         return dto;
     }
@@ -77,12 +94,32 @@ public class FamilyMemberService {
                 .collect(Collectors.toList());
     }
 
+    private String saveAvatarFile(MultipartFile file) {
+        try {
+            String extension = Optional.ofNullable(file.getOriginalFilename())
+                    .map(f -> f.substring(f.lastIndexOf('.') + 1))
+                    .orElse("jpg");
+
+            String filename = UUID.randomUUID() + "." + extension;
+            Path path = Paths.get(uploadDir, filename);
+            Files.createDirectories(path.getParent());
+            Files.write(path, file.getBytes());
+            return "/api/images/" + filename;
+        } catch (IOException e) {
+            throw new RuntimeException("Could not save avatar image", e);
+        }
+    }
+
     @Transactional
-    public FamilyMemberDTO createFamilyMember(FamilyMemberDTO memberDTO) {
+    public FamilyMemberDTO createFamilyMember(FamilyMemberDTO memberDTO, MultipartFile avatarFile) {
         FamilyMember member = convertToEntity(memberDTO);
         member.setCreatedAt(LocalDateTime.now());
         member.setUpdatedAt(LocalDateTime.now());
         member.setCreatedBy(getCurrentUserId());
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            String avatarUrl = saveAvatarFile(avatarFile);
+            memberDTO.setAvatarUrl(avatarUrl);
+        }
 
         // Auto fill spouse and parents
         autoFillSpouseAndParents(member);
@@ -101,27 +138,41 @@ public class FamilyMemberService {
         return convertToDTO(saved);
     }
 
+    private void updateEntityFromDTO(FamilyMember entity, FamilyMemberDTO dto) {
+        entity.setFullName(dto.getFullName());
+        entity.setNickname(dto.getNickname());
+        entity.setGender(dto.getGender());
+        entity.setBirthDate(dto.getBirthDate());
+        entity.setDeathDate(dto.getDeathDate());
+        entity.setBirthPlace(dto.getBirthPlace());
+        entity.setOccupation(dto.getOccupation());
+        entity.setDescription(dto.getDescription());
+        entity.setAvatarUrl(dto.getAvatarUrl());
+        entity.setFatherId(dto.getFatherId());
+        entity.setMotherId(dto.getMotherId());
+        entity.setSpouseId(dto.getSpouseId());
+        entity.setChildrenIds(dto.getChildrenIds());
+    }
+
     @Transactional
-    public FamilyMemberDTO updateFamilyMember(String id, FamilyMemberDTO memberDTO) {
+    public FamilyMemberDTO updateFamilyMember(String id, FamilyMemberDTO memberDTO, MultipartFile avatarFile) {
         FamilyMember existingMember = familyMemberRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            String avatarUrl = saveAvatarFile(avatarFile);
+            memberDTO.setAvatarUrl(avatarUrl);
+        } else {
+            // Nếu không cập nhật avatar, giữ nguyên ảnh cũ
+            memberDTO.setAvatarUrl(existingMember.getAvatarUrl());
+        }
+        // Gán các trường từ DTO vào entity
+        updateEntityFromDTO(existingMember, memberDTO);
 
-        // Update fields
-        existingMember.setFullName(memberDTO.getFullName());
-        existingMember.setNickname(memberDTO.getNickname());
-        existingMember.setGender(memberDTO.getGender());
-        existingMember.setBirthDate(memberDTO.getBirthDate());
-        existingMember.setDeathDate(memberDTO.getDeathDate());
-        existingMember.setBirthPlace(memberDTO.getBirthPlace());
-        existingMember.setOccupation(memberDTO.getOccupation());
-        existingMember.setDescription(memberDTO.getDescription());
-        existingMember.setAvatarUrl(memberDTO.getAvatarUrl());
+        // Set metadata
         existingMember.setUpdatedAt(LocalDateTime.now());
         existingMember.setUpdatedBy(getCurrentUserId());
-        existingMember.setFatherId(memberDTO.getFatherId());
-        existingMember.setMotherId(memberDTO.getMotherId());
-        existingMember.setSpouseId(memberDTO.getSpouseId());
 
+        // Xử lý logic liên kết và thế hệ
         autoFillSpouseAndParents(existingMember);
         calculateGeneration(existingMember);
 
@@ -170,7 +221,7 @@ public class FamilyMemberService {
     private void autoFillSpouseAndParents(FamilyMember member) {
         String memberId = member.getId();
 
-        // 1. Spouse sync and generation sync
+        // 1. Spouse sync and generation sync (bidirectional)
         if (member.getSpouseId() != null) {
             familyMemberRepository.findById(member.getSpouseId()).ifPresent(spouse -> {
 
@@ -182,13 +233,15 @@ public class FamilyMemberService {
                     familyMemberRepository.save(spouse);
                 }
 
-                // Spouse link
-                if (spouse.getSpouseId() == null) {
+                // Ensure bidirectional spouse link
+                if (memberId != null && !memberId.equals(spouse.getSpouseId())) {
+                    if (spouse.getSpouseId() != null && !spouse.getSpouseId().equals(memberId)) {
+                        throw new RuntimeException("Người bạn chọn làm vợ/chồng đã kết hôn với người khác.");
+                    }
+
+                    // Gán ngược spouseId nếu chưa đúng
                     spouse.setSpouseId(memberId);
                     familyMemberRepository.save(spouse);
-                } else if (!spouse.getSpouseId().equals(memberId)) {
-                    logHistory("WARNING", memberId, member.getFullName(),
-                            "Spouse " + spouse.getFullName() + " already has another spouse: " + spouse.getSpouseId());
                 }
             });
         }
@@ -214,6 +267,7 @@ public class FamilyMemberService {
         // 4. Update children lists of parents
         updateParentChildren(member);
     }
+
 
     private void updateParentChildren(FamilyMember member) {
         if (member.getFatherId() != null) {

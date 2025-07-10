@@ -74,47 +74,17 @@
                     </div>
                   </div>
 
-                  <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="font-semibold text-gray-700 mb-2">Family Relations</h3>
-                    <div class="space-y-2 text-sm">
-                      <p v-if="member.father">
-                        <span class="font-medium">Father:</span>
-                        <router-link :to="`/member/${member.father.id}`" class="text-blue-600 hover:underline">
-                          {{ member.father.fullName }}
-                        </router-link>
-                      </p>
-                      <p v-if="member.mother">
-                        <span class="font-medium">Mother:</span>
-                        <router-link :to="`/member/${member.mother.id}`" class="text-blue-600 hover:underline">
-                          {{ member.mother.fullName }}
-                        </router-link>
-                      </p>
-                      <p v-if="member.spouse">
-                        <span class="font-medium">Spouse:</span>
-                        <router-link :to="`/member/${member.spouse.id}`" class="text-blue-600 hover:underline">
-                          {{ member.spouse.fullName }}
-                        </router-link>
-                      </p>
-                      <p v-if="member.children && member.children.length > 0">
-                        <span class="font-medium">Children:</span> {{ member.children.length }}
-                        <router-link v-if="member.children.length === 1" :to="`/member/${member.children[0].id}`"
-                          class="text-blue-600 hover:underline">
-                          {{ member.children[0].fullName }}
-                        </router-link>
-                        <span v-else-if="member.children.length > 1"> (see below)</span>
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
                 <div v-if="member.description" class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="font-semibold text-gray-700 mb-2">Description</h3>
-                  <p class="text-gray-600 whitespace-pre-wrap">{{ member.description }}</p>
+                  <div class="text-gray-600 prose max-w-none" v-html="member.description"></div>
                 </div>
               </div>
 
               <!-- Edit Form -->
-              <FamilyMemberForm v-else :member="member" :is-editing="true" @save="handleSave" @cancel="toggleEdit" />
+              <FamilyMemberForm v-else :member="member" :is-editing="true" @member-saved="handleSave"
+                @cancel="toggleEdit" />
             </div>
           </div>
 

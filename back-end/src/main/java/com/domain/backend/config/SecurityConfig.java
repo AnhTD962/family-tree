@@ -52,7 +52,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**",
+                                "/api/images/**").permitAll()
                         .requestMatchers("/api/family-members/tree", "/api/family-members/search", "/api/family-members/{id}").permitAll()
                         .requestMatchers("/api/family-members/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

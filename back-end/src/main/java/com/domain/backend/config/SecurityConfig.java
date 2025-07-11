@@ -55,7 +55,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**",
                                 "/api/images/**").permitAll()
                         .requestMatchers("/api/family-members/tree", "/api/family-members/search", "/api/family-members/{id}").permitAll()
-                        .requestMatchers("/api/family-members/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/family-members/**",
+                                "/api/user/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 );

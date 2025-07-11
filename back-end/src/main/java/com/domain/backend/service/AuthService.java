@@ -53,7 +53,12 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        String token = jwtUtil.generateToken(savedUser.getUsername());
+        // ✅ Convert roles to List<String>
+        var roles = savedUser.getRoles().stream()
+                .map(Enum::name)
+                .toList();
+
+        String token = jwtUtil.generateToken(savedUser.getUsername(), roles);
         String refreshToken = jwtUtil.generateRefreshToken(savedUser.getUsername());
 
         return new AuthResponse(
@@ -69,6 +74,7 @@ public class AuthService {
         );
     }
 
+
     public AuthResponse login(AuthRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -82,7 +88,11 @@ public class AuthService {
                 throw new RuntimeException("Account is disabled");
             }
 
-            String token = jwtUtil.generateToken(user.getUsername());
+            var roles = user.getRoles().stream()
+                    .map(Enum::name)
+                    .toList();
+
+            String token = jwtUtil.generateToken(user.getUsername(), roles);
             String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
             return new AuthResponse(
@@ -102,6 +112,7 @@ public class AuthService {
         }
     }
 
+
     public AuthResponse refresh(String bearerToken) {
         String token = bearerToken.substring(7);
         String username = jwtUtil.extractUsername(token);
@@ -113,7 +124,11 @@ public class AuthService {
             throw new RuntimeException("Account is disabled");
         }
 
-        String newToken = jwtUtil.generateToken(user.getUsername());
+        var roles = user.getRoles().stream()
+                .map(Enum::name)
+                .toList();
+
+        String newToken = jwtUtil.generateToken(user.getUsername(), roles);
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
         return new AuthResponse(
@@ -128,4 +143,5 @@ public class AuthService {
                 user.isActive()
         );
     }
+
 }

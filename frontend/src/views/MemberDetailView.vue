@@ -35,6 +35,11 @@
           </div>
         </div>
 
+        <!-- Guest Notice -->
+        <div v-if="isGuest" class="bg-yellow-50 text-yellow-800 px-4 py-2 border border-yellow-300 rounded">
+          You are viewing as a guest. Please log in to edit or contribute to the family tree.
+        </div>
+
         <!-- Member Information -->
         <div class="p-6">
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -42,7 +47,7 @@
             <div class="lg:col-span-1">
               <div class="text-center">
                 <div class="relative inline-block">
-                  <img :src="member.avatarUrl || defaultAvatar" :alt="member.fullName"
+                  <img :src="`http://localhost:8080${member.avatarUrl}` || defaultAvatar" :alt="member.fullName"
                     class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-gray-200" />
                   <div class="absolute bottom-0 right-0 w-8 h-8 rounded-full border-2 border-white"
                     :class="member.gender === 'MALE' ? 'bg-blue-500' : 'bg-pink-500'">
@@ -73,7 +78,6 @@
                       </p>
                     </div>
                   </div>
-
                 </div>
 
                 <div v-if="member.description" class="bg-gray-50 p-4 rounded-lg">
@@ -124,8 +128,8 @@
             </div>
           </div>
 
-          <!-- Timeline -->
-          <div class="mt-8">
+          <!-- Timeline (Only for logged in users) -->
+          <div v-if="!isGuest" class="mt-8">
             <h3 class="text-xl font-semibold text-gray-900 mb-4">Timeline</h3>
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="space-y-2 text-sm text-gray-600">
@@ -148,12 +152,9 @@
         </p>
         <div class="flex justify-end space-x-3">
           <button @click="showDeleteModal = false"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-            Cancel
-          </button>
-          <button @click="handleDelete" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-            Delete
-          </button>
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button @click="handleDelete"
+            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Delete</button>
         </div>
       </div>
     </div>
@@ -161,7 +162,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
 import { useAuthStore } from '@/stores/auth'
@@ -183,31 +184,32 @@ export default {
     const authStore = useAuthStore()
 
     const member = ref(null)
-    const loading = ref(true)
+    const loading = ref(false)
     const error = ref(null)
     const isEditing = ref(false)
     const showDeleteModal = ref(false)
 
     const defaultAvatar = '/default-avatar.png'
 
-    const canEdit = computed(() => {
-      return authStore.isUser || authStore.isAdmin
-    })
+    const canEdit = computed(() => authStore.isUser || authStore.isAdmin)
+    const canDelete = computed(() => authStore.isAdmin)
+    const isGuest = computed(() => !authStore.isAuthenticated)
 
-    const canDelete = computed(() => {
-      return authStore.isAdmin
-    })
-
-    const loadMember = async () => {
+    const loadMember = async (memberId) => {
+      loading.value = true
+      error.value = null
       try {
-        loading.value = true
-        error.value = null
-        const memberId = route.params.id
         member.value = await familyStore.loadFamilyMember(memberId)
       } catch (err) {
         error.value = err.message || 'Failed to load member details'
       } finally {
         loading.value = false
+      }
+    }
+
+    const navigateToMember = (memberId) => {
+      if (route.params.id !== memberId) {
+        router.push(`/member/${memberId}`)
       }
     }
 
@@ -224,8 +226,6 @@ export default {
         await familyStore.updateMember(member.value.id, updatedMember)
         member.value = { ...member.value, ...updatedMember }
         isEditing.value = false
-        // Show success message
-        // You can add a toast notification here
       } catch (err) {
         error.value = err.message || 'Failed to update member'
       }
@@ -239,35 +239,26 @@ export default {
       try {
         await familyStore.deleteMember(member.value.id)
         showDeleteModal.value = false
-        router.push('/-')
-        // Show success message
-        // You can add a toast notification here
+        router.push('/')
       } catch (err) {
         error.value = err.message || 'Failed to delete member'
         showDeleteModal.value = false
       }
     }
 
-    const navigateToMember = (memberId) => {
-      router.push(`/member/${memberId}`)
-    }
-
-    const formatGender = (gender) => {
-      return gender === 'MALE' ? 'Male' : 'Female'
-    }
-
-    const formatDate = (dateString) => {
-      if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString()
-    }
-
-    const formatDateTime = (dateTimeString) => {
-      if (!dateTimeString) return ''
-      return new Date(dateTimeString).toLocaleString()
-    }
+    const formatGender = (gender) => gender === 'MALE' ? 'Male' : 'Female'
+    const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : ''
+    const formatDateTime = (dateTimeString) => dateTimeString ? new Date(dateTimeString).toLocaleString() : ''
 
     onMounted(() => {
-      loadMember()
+      loadMember(route.params.id)
+    })
+
+    watch(() => route.params.id, async (newId, oldId) => {
+      if (newId !== oldId) {
+        isEditing.value = false
+        await loadMember(newId)
+      }
     })
 
     return {
@@ -279,6 +270,7 @@ export default {
       defaultAvatar,
       canEdit,
       canDelete,
+      isGuest,
       goBack,
       toggleEdit,
       handleSave,
@@ -303,18 +295,10 @@ export default {
   max-width: 1200px;
 }
 
-/* Custom scrollbar for description */
-.whitespace-pre-wrap {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-/* Hover effects */
 .transition-colors {
   transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
 }
 
-/* Gender indicator */
 .gender-indicator {
   position: absolute;
   bottom: 0;
@@ -325,7 +309,6 @@ export default {
   border: 2px solid white;
 }
 
-/* Modal backdrop */
 .fixed.inset-0 {
   backdrop-filter: blur(2px);
 }

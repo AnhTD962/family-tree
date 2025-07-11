@@ -31,8 +31,6 @@ public class ImageController {
                     .resolve(filename)
                     .normalize();
 
-            System.out.println("Resolved image path: " + filePath.toAbsolutePath());
-
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
                 System.err.println("File not found or unreadable: " + filePath.toAbsolutePath());

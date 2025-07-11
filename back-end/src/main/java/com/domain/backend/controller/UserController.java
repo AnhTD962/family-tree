@@ -4,14 +4,12 @@ import com.domain.backend.dto.UserDetailDTO;
 import com.domain.backend.dto.request.ChangePasswordRequest;
 import com.domain.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/user")
 @CrossOrigin(origins = "*")
-@PreAuthorize("isAuthenticated()")
 public class UserController {
     @Autowired
     private UserService userService;

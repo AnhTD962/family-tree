@@ -69,7 +69,9 @@
               {{ activity.targetMemberName || '-' }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-gray-700">
-              <strong class="text-gray-400 text-xs">{{ activity.userId }}</strong>
+              <strong class="text-gray-700 text-sm">
+                {{ userMap[activity.userId] || activity.userId }}
+              </strong>
             </td>
             <td class="px-6 py-4 whitespace-pre-wrap text-gray-700">
               {{ activity.details }}
@@ -134,8 +136,9 @@ const filteredHistory = computed(() => {
 
   return history.value.filter((activity) => {
     const matchesAction = !actionFilter.value || activity.action === actionFilter.value
-    const matchesUser = !userFilter.value ||
-      (activity.username && activity.username.toLowerCase().includes(userFilter.value.toLowerCase()))
+    const matchesUser = !userFilter.value || (
+      userMap.value[activity.userId]?.toLowerCase().includes(userFilter.value.toLowerCase())
+    )
 
     let matchesDate = true
     if (dateFromFilter.value || dateToFilter.value) {
@@ -161,7 +164,10 @@ const paginatedHistory = computed(() => {
 const fetchHistory = async () => {
   loading.value = true
   try {
-    await adminStore.loadHistory();
+    await Promise.all([
+      adminStore.loadHistory(),
+      adminStore.loadUsers()
+    ])
     history.value = adminStore.history || []
     totalElements.value = adminStore.totalActivityHistory || 0
   } catch (error) {
@@ -182,6 +188,9 @@ const formatDateTime = (timestamp) => {
     minute: '2-digit'
   })
 }
+const userMap = computed(() => {
+  return Object.fromEntries(adminStore.users.map(user => [user.id, user.username]))
+})
 
 const clearFilters = () => {
   actionFilter.value = ''

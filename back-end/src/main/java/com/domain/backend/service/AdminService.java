@@ -41,14 +41,12 @@ public class AdminService {
         userRepository.save(user);
     }
 
-    public Page<FamilyTreeHistoryDTO> getFamilyTreeHistory(Pageable pageable) {
-        Page<FamilyTreeHistory> historyPage = historyRepository.findAll(pageable);
+    public List<FamilyTreeHistoryDTO> getFamilyTreeHistory() {
+        List<FamilyTreeHistory> historyList = historyRepository.findAll();
 
-        List<FamilyTreeHistoryDTO> historyDTOs = historyPage.getContent().stream()
+        return historyList.stream()
                 .map(this::convertToHistoryDTO)
                 .collect(Collectors.toList());
-
-        return new PageImpl<>(historyDTOs, pageable, historyPage.getTotalElements());
     }
 
     private UserDTO convertToUserDTO(User user) {
@@ -56,6 +54,8 @@ public class AdminService {
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
+        dto.setAvatarUrl(user.getAvatarUrl());
+        dto.setPhoneNumber(user.getPhoneNumber());
         dto.setFullName(user.getFullName());
         dto.setRoles(user.getRoles());
         dto.setActive(user.isActive());

@@ -4,8 +4,6 @@ import com.domain.backend.dto.FamilyTreeHistoryDTO;
 import com.domain.backend.dto.UserDTO;
 import com.domain.backend.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,9 +30,7 @@ public class AdminController {
     }
 
     @GetMapping("/history")
-    public Page<FamilyTreeHistoryDTO> getFamilyTreeHistory(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return adminService.getFamilyTreeHistory(PageRequest.of(page, size));
+    public List<FamilyTreeHistoryDTO> getFamilyTreeHistory() {
+        return adminService.getFamilyTreeHistory();
     }
 }

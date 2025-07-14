@@ -30,6 +30,6 @@ public class UserController {
     @PutMapping("/change-password")
     public String changePassword(@RequestBody ChangePasswordRequest request) {
         userService.changePassword(request);
-        return "Đổi mật khẩu thành công";
+        return "Change password successfully";
     }
 }

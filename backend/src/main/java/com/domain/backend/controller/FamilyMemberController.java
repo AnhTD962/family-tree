@@ -1,8 +1,10 @@
 package com.domain.backend.controller;
 
-import com.domain.backend.model.FamilyMember;
+import com.domain.backend.dto.FamilyMemberDTO;
+import com.domain.backend.dto.response.FamilyTreeResponse;
 import com.domain.backend.service.FamilyMemberService;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -10,84 +12,54 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@CrossOrigin
 @RestController
-@RequestMapping("/api/members")
-@RequiredArgsConstructor
+@RequestMapping("/api/family-members")
+@CrossOrigin(origins = "*")
 public class FamilyMemberController {
 
-    private final FamilyMemberService memberService;
+    @Autowired
+    private FamilyMemberService familyMemberService;
 
-    @GetMapping
-    public ResponseEntity<List<FamilyMember>> getAll() {
-        return ResponseEntity.ok(memberService.getAll());
+    @GetMapping("/tree")
+    public FamilyTreeResponse getFamilyTree() {
+        return familyMemberService.getFamilyTree();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FamilyMember> getById(@PathVariable String id) {
-        return ResponseEntity.ok(memberService.getById(id));
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    @PostMapping
-    public ResponseEntity<FamilyMember> create(@RequestBody FamilyMember member) {
-        return ResponseEntity.ok(memberService.create(member));
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    @PutMapping("/{id}")
-    public ResponseEntity<FamilyMember> update(@PathVariable String id, @RequestBody FamilyMember member) {
-        return ResponseEntity.ok(memberService.update(id, member));
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        memberService.delete(id);
-        return ResponseEntity.ok().build();
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    @PostMapping("/{id}/avatar")
-    public ResponseEntity<String> uploadAvatar(@PathVariable String id, @RequestParam("file") MultipartFile file) {
-        String url = memberService.uploadAvatar(id, file);
-        return ResponseEntity.ok(url);
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    @PostMapping("/{id}/relations")
-    public ResponseEntity<FamilyMember> addRelation(
-            @PathVariable String id,
-            @RequestParam String targetId,
-            @RequestParam String type
-    ) {
-        return ResponseEntity.ok(memberService.addRelation(id, targetId, type));
+    public FamilyMemberDTO getFamilyMember(@PathVariable String id) {
+        return familyMemberService.getFamilyMember(id);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<FamilyMember>> search(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String gender,
-            @RequestParam(required = false) String birthYear
+    public List<FamilyMemberDTO> searchMembers(@RequestParam String query) {
+        return familyMemberService.searchMembers(query);
+    }
+
+    @PostMapping(consumes = {"multipart/form-data"})
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<FamilyMemberDTO> createFamilyMember(
+            @RequestPart("member") @Valid FamilyMemberDTO memberDTO,
+            @RequestPart(value = "file", required = false) MultipartFile file
     ) {
-        return ResponseEntity.ok(memberService.search(name, gender, birthYear));
+        FamilyMemberDTO created = familyMemberService.createFamilyMember(memberDTO, file);
+        return ResponseEntity.ok(created);
     }
 
-    @GetMapping("/tree/{rootId}")
-    public ResponseEntity<Object> getTree(@PathVariable String rootId) {
-        return ResponseEntity.ok(memberService.generateTreeFromRoot(rootId));
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<FamilyMemberDTO> updateFamilyMember(
+            @PathVariable String id,
+            @RequestPart("member") @Valid FamilyMemberDTO memberDTO,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        FamilyMemberDTO updated = familyMemberService.updateFamilyMember(id, memberDTO, file);
+        return ResponseEntity.ok(updated);
     }
 
-    @GetMapping("/export/{rootId}")
-    public ResponseEntity<String> exportTreeJson(@PathVariable String rootId) {
-        return ResponseEntity.ok(memberService.exportTreeAsJson(rootId));
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    @PostMapping("/{id}/undo")
-    public ResponseEntity<Void> undoLastChange(@PathVariable String id) {
-        memberService.undoLastChange(id);
-        return ResponseEntity.ok().build();
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> deleteFamilyMember(@PathVariable String id) {
+        familyMemberService.deleteFamilyMember(id);
+        return ResponseEntity.ok("Member deleted successfully");
     }
 }
-

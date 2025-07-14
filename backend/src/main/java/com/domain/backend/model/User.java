@@ -1,23 +1,39 @@
 package com.domain.backend.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document("users")
+import java.time.LocalDateTime;
+import java.util.Set;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Document(collection = "users")
 public class User {
     @Id
     private String id;
-    private String fullName;
+
+    @Indexed(unique = true)
     private String username;
-    private String email; // hoặc email
+
+    @Indexed(unique = true)
+    private String email;
+
+    private String avatarUrl;
+    private String phoneNumber;
     private String password;
-    private String role; // "USER", "ADMIN"
+    private String fullName;
+    private Set<Role> roles;
+    private boolean isActive = true;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    public enum Role {
+        GUEST, USER, ADMIN
+    }
 }

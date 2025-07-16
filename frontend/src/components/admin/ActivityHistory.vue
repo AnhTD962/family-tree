@@ -20,12 +20,6 @@
       </div>
 
       <div class="flex flex-col">
-        <label class="text-sm font-medium text-gray-700">User:</label>
-        <input v-model="userFilter" type="text" placeholder="Search by username..."
-          class="border border-gray-300 rounded px-3 py-2 text-sm min-w-[150px]" />
-      </div>
-
-      <div class="flex flex-col">
         <label class="text-sm font-medium text-gray-700">Date Range:</label>
         <div class="flex items-center gap-2">
           <input v-model="dateFromFilter" type="date" class="border border-gray-300 rounded px-3 py-2 text-sm" />
@@ -70,7 +64,7 @@
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-gray-700">
               <strong class="text-gray-700 text-sm">
-                {{ userMap[activity.userId] || activity.userId }}
+                {{ userMap[activity.username] || activity.userId }}
               </strong>
             </td>
             <td class="px-6 py-4 whitespace-pre-wrap text-gray-700">
@@ -121,7 +115,6 @@ const adminStore = useAdminStore()
 const history = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
-const totalElements = ref(0)
 const pageSize = 10
 
 const actionFilter = ref('')
@@ -129,16 +122,13 @@ const userFilter = ref('')
 const dateFromFilter = ref('')
 const dateToFilter = ref('')
 
-const totalPages = computed(() => Math.ceil(totalElements.value / pageSize))
+const totalPages = computed(() => Math.ceil(filteredHistory.value.length / pageSize))
 
 const filteredHistory = computed(() => {
   if (!Array.isArray(history.value)) return []
 
   return history.value.filter((activity) => {
     const matchesAction = !actionFilter.value || activity.action === actionFilter.value
-    const matchesUser = !userFilter.value || (
-      userMap.value[activity.userId]?.toLowerCase().includes(userFilter.value.toLowerCase())
-    )
 
     let matchesDate = true
     if (dateFromFilter.value || dateToFilter.value) {
@@ -150,7 +140,7 @@ const filteredHistory = computed(() => {
       if (toDate && activityDate > toDate) matchesDate = false
     }
 
-    return matchesAction && matchesUser && matchesDate
+    return matchesAction && matchesDate
   })
 })
 
@@ -169,7 +159,6 @@ const fetchHistory = async () => {
       adminStore.loadUsers()
     ])
     history.value = adminStore.history || []
-    totalElements.value = adminStore.totalActivityHistory || 0
   } catch (error) {
     console.error('Error fetching activity history:', error)
     alert('Failed to fetch activity history')

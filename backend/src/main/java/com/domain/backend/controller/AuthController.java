@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -27,7 +29,8 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public AuthResponse refresh(@RequestHeader("Authorization") String token) {
-        return authService.refresh(token);
+    public AuthResponse refresh(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        return authService.refresh(refreshToken);
     }
 }

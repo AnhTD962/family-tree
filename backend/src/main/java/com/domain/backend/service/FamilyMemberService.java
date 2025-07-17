@@ -209,7 +209,6 @@ public class FamilyMemberService {
     }
 
 
-
     private void deleteDescendants(String parentId) {
         List<FamilyMember> children = familyMemberRepository.findChildren(parentId);
         for (FamilyMember child : children) {

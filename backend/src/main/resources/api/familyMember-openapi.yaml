@@ -1,0 +1,242 @@
+openapi: 3.0.3
+info:
+  title: User API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api
+    description: User API
+
+tags:
+  - name: familyMember
+    description: Admin API
+
+paths:
+  /familyMember/tree:
+    get:
+      summary: Get all family members
+      tags: [ familyMember ]
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyMemberTree'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /familyMember/{id}:
+    get:
+      summary: Get family member by id
+      tags: [ familyMember ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyMember'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update family member
+      tags: [ familyMember ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyMember'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyMember'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete family member
+      tags: [ familyMember ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+        400:
+          description: Bad request
+        500:
+          description: Internal server error
+
+  /familyMember/search:
+    get:
+      summary: Search family members
+      tags: [ familyMember ]
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyMember'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /familyMember:
+    post:
+      summary: Create family member
+      tags: [ familyMember ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyMember'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyMember'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    FamilyMember:
+      type: object
+      required:
+        - name
+        - email
+        - phone
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+    FamilyMemberTree:
+      type: object
+      required:
+        - name
+        - email
+        - phone
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/FamilyMemberTree'
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+        data:
+          $ref: '#/components/schemas/FamilyMember'
+        dataTree:
+          $ref: '#/components/schemas/FamilyMemberTree'
+        dataList:
+          type: array
+          items:
+            $ref: '#/components/schemas/FamilyMember'
+        dataTreeList:
+          type: array
+          items:
+            $ref: '#/components/schemas/FamilyMemberTree'

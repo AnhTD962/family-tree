@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: User API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api
+    description: User API
+
+tags:
+  - name: admin
+    description: Admin API
+
+paths:
+  /admin/users:
+    get:
+      tags:
+        - admin
+      summary: Get all users
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/users/{id}/status:
+    put:
+      tags:
+        - admin
+      summary: Update user status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/history:
+    get:
+      tags:
+        - admin
+      summary: Get history
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+
+    HistoryResponse:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+

@@ -53,7 +53,6 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // ✅ Convert roles to List<String>
         var roles = savedUser.getRoles().stream()
                 .map(Enum::name)
                 .toList();
@@ -114,15 +113,13 @@ public class AuthService {
 
 
     public AuthResponse refresh(String refreshToken) {
-        // 1. Kiểm tra hạn token
+
         if (jwtUtil.isTokenExpired(refreshToken)) {
             throw new RuntimeException("Refresh token expired");
         }
 
-        // 2. Lấy username từ refresh token
         String username = jwtUtil.extractUsername(refreshToken);
 
-        // 3. Tìm người dùng trong DB
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -130,7 +127,6 @@ public class AuthService {
             throw new RuntimeException("Account is disabled");
         }
 
-        // 4. Tạo access token mới + refresh token mới
         var roles = user.getRoles().stream()
                 .map(Enum::name)
                 .toList();

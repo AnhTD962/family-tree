@@ -192,19 +192,14 @@ public class FamilyMemberService {
         FamilyMember member = familyMemberRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
-        // Gỡ liên kết với cha mẹ
         removeChildFromParents(member);
 
-        // Gỡ liên kết với vợ/chồng
         removeSpouseLink(member);
 
-        // Xóa con cháu
         deleteDescendants(id);
 
-        // Xóa chính người đó
         familyMemberRepository.deleteById(id);
 
-        // Ghi lịch sử
         logHistory("DELETE", id, member.getFullName(), "Deleted family member and all descendants");
     }
 
@@ -231,7 +226,6 @@ public class FamilyMemberService {
     private void removeChildFromParents(FamilyMember member) {
         String memberId = member.getId();
 
-        // Xóa khỏi cha
         if (member.getFatherId() != null) {
             familyMemberRepository.findById(member.getFatherId()).ifPresent(father -> {
                 father.getChildrenIds().remove(memberId);
@@ -239,7 +233,6 @@ public class FamilyMemberService {
             });
         }
 
-        // Xóa khỏi mẹ
         if (member.getMotherId() != null) {
             familyMemberRepository.findById(member.getMotherId()).ifPresent(mother -> {
                 mother.getChildrenIds().remove(memberId);

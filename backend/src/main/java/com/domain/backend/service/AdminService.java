@@ -73,7 +73,6 @@ public class AdminService {
         dto.setDetails(history.getDetails());
         dto.setTimestamp(history.getTimestamp());
 
-        // Get username from user ID
         userRepository.findById(history.getUserId())
                 .ifPresent(user -> dto.setUsername(user.getUsername()));
 
